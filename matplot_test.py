@@ -1,14 +1,24 @@
+import rebound
 import matplotlib.pyplot as plt
-import numpy as np
+from IPython.display import display, clear_output
+from matplotlib.animation import FuncAnimation
 
-np.random.seed(19680801)
-data = np.random.randn(2, 100)
 
-fig, axs = plt.subplots(2, 2, figsize=(5, 5))
-axs[0, 0].hist(data[0])
-axs[1, 0].scatter(data[0], data[1])
-axs[0, 1].plot(data[0], data[1])
-axs[1, 1].hist2d(data[0], data[1])
 
-plt.show()
-print("done")
+sim = rebound.Simulation.from_file("solar_system.bin")
+rebound.OrbitPlot(sim)
+# plt.show()
+
+sim.add(m=1,x=40, y=-1000, vy=1.2)
+sim.integrate(sim.t+600)
+
+sim.move_to_hel()
+
+
+
+for i in range(300):
+    sim.integrate(sim.t+10)
+    fig = rebound.OrbitPlot(sim,color=True,unitlabel="[AU]", lim=250.,
+        show_orbit=True, fancy=True)
+    plt.show()
+    # clear_output(wait=True)
