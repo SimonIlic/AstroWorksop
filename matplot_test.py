@@ -1,7 +1,6 @@
 import rebound
 import matplotlib.pyplot as plt
-from IPython.display import display, clear_output
-from matplotlib.animation import FuncAnimation
+# from tkinter import *
 
 
 
@@ -20,5 +19,7 @@ for i in range(300):
     sim.integrate(sim.t+10)
     fig = rebound.OrbitPlot(sim,color=True,unitlabel="[AU]", lim=250.,
         show_orbit=True, fancy=True)
-    plt.show()
-    # clear_output(wait=True)
+    plt.close(fig)
+    print(i, "of 300.")
+    # plt.savefig(f"plotje_{i}.png")
+plt.show()
