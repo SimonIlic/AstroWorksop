@@ -1,4 +1,5 @@
 import rebound
+import matplotlib.pyplot as plt
 
 sim = rebound.Simulation() #initiate simulation
 sim.add(m=1.0) #Star A
