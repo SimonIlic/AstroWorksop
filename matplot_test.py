@@ -4,6 +4,7 @@
 
 import imageio
 import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 import rebound
 
@@ -23,15 +24,18 @@ r = 3
 images = np.array([])
 for i in range(r):
     sim.integrate(sim.t+10)
-    fig = rebound.OrbitPlot(sim,color=True,unitlabel="[AU]", lim=250.,
+    fig, ax = plt.subplots()
+    ax = rebound.OrbitPlot(sim,color=True,unitlabel="[AU]", lim=250.,
         show_orbit=True)
+    fig.canvas.draw()
+    image = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8')
+    image  = image.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+
     print(f"{i + 1} of {r}.")
-    plt.savefig(f"plotje_{i}.png")
-    print(type(fig))
-    images = np.append(images, [np.array(fig.canvas.renderer._renderer)])
-    print("---------------------", (images[0]), type(images[0]))
+    plt.savefig(f"plotje_{i + 1}.png")
+    images = np.append(images, image)
     if isinstance(images, np.ndarray):
         print(f"Hier moet numpy array staan: {type(images[0])}")
     plt.close('all')
 
-imageio.mimsave('fly_by_gifje.gif', images)
+imageio.mimsave('./fly_by_gifje.gif', images)
