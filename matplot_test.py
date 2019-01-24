@@ -26,11 +26,12 @@ for i in range(r):
     fig = rebound.OrbitPlot(sim,color=True,unitlabel="[AU]", lim=250.,
         show_orbit=True)
     print(f"{i + 1} of {r}.")
-    plt.savefig(f"/plaatjes/plotje_{i}.png")
-    images = np.append(images, [imageio.imread(f"/plaatjes/plotje_{i}.png")])
-    print((images[0]))
+    plt.savefig(f"plotje_{i}.png")
+    print(type(fig))
+    images = np.append(images, [np.array(fig.canvas.renderer._renderer)])
+    print("---------------------", (images[0]), type(images[0]))
     if isinstance(images, np.ndarray):
-        print(f"Dit is een fucking numpy array maat, check: {type(images)}")
+        print(f"Hier moet numpy array staan: {type(images[0])}")
     plt.close('all')
 
 imageio.mimsave('fly_by_gifje.gif', images)
