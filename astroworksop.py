@@ -3,22 +3,14 @@
 # Jasper Lankhorst
 # Workshop Astronomy
 
+import random
 import rebound
 import numpy as np
-
 from IPython.display import display, clear_output
 import matplotlib.pyplot as plt
+from scipy import spatial
 
-sim = rebound.Simulation()
-particle_names = ["Sun", "Jupiter", "Saturn", "Uranus", "Neptune"]
-# we use the NASA horizon database to look up the Sun and planets
-sim.add(particle_names)
 
-# let's give all the particles a unique hash (based on its name)
-for i, particle in enumerate(sim.particles):
-    particle.hash = particle_names[i]
-sim.status()
-sim.save("solar_system_outer_planets.bin")
 sim = rebound.Simulation.from_file("solar_system_outer_planets.bin")
 
 
@@ -63,7 +55,8 @@ def calc_escape_velocity(sim, particle):
 
 
 def strong_regime(resolution=100, n_trials=50):
-    print("Starting strong regime simulation with resolution {}, {} trials each...".format(resolution, n_trials))
+    print(f"Starting strong regime simulation with resolution {resolution},"
+          f"{n_trials} trials each...")
     xs = np.linspace(1, 50, resolution)
     f_eject = np.ones(resolution)
 
@@ -150,6 +143,43 @@ def check_orbit_crossing(simulation):
     return False
 
 
+def check_immediate_ejection(sim):
+    # move to Sun frame
+    sim.move_to_hel()
+
+    # calculate velocity of each particle and compare to escpae velocity
+    for particle in sim.particles[1:]:
+        v = np.linalg.norm(particle.vxyz)
+        v_esc = calc_escape_velocity(sim, particle)
+        if v >= v_esc:
+            return True
+
+    return False
+
+
+
+def  check_kozai(sim):
+    # compare all particles
+    for i, particle_1 in enumerate(sim.particles[1:]):
+        for j, particle_2 in enumerate(sim.particles[i+2:]):
+            # calculate mutual inclination. defined as difference in inclination between two orbits
+            mutual_inclination = abs(particle_1.inc - particle_2.inc)
+            # check if mutual inclination is between 39.2 degrees and 140.2 degrees
+            if 0.684 <  mutual_inclination and mutual_inclination < 2.46:
+                return True
+
+    return False
+
+
+
+def randomize_sim(sim):
+    """
+    Integrates simulation for any number of time between 0 and 999.
+    """
+    sim.integrate(random.randint(0, 999))
+    return sim
+
+
 def analyze_stability(sim):
 
     if check_immediate_ejection(sim) == True:
@@ -161,12 +191,15 @@ def analyze_stability(sim):
     elif check_kozai(sim) == True:
         return False
 
-    elif check_AMD(sim) == True:
-        return False
+    # elif check_AMD(sim) == True:
+    #     return False
 
     else:
         return True
 
 
 if __name__ == "__main__":
-    analyze_stability(sim)
+    print(analyze_stability(sim))
+    xs, f_eject = strong_regime(resolution=30, n_trials=100)
+
+    plt.plot(xs, f_eject)
