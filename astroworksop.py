@@ -15,6 +15,9 @@ sim = rebound.Simulation.from_file("solar_system_outer_planets.bin")
 
 
 def simulate_fly_by(sim, intruder, visualize=False):
+    """
+    Simulates what happens when a star flies by a planetary system.
+    """
     intruder.hash = "intruder"
 
     sim.add(intruder)
@@ -45,7 +48,9 @@ def simulate_fly_by(sim, intruder, visualize=False):
 
 
 def calc_escape_velocity(sim, particle):
-    #sim.move_to_hel()
+    """
+    For a given simulation and planets, calculates its escape velocity.
+    """
 
     r = np.linalg.norm(particle.xyz)
     G = sim.G
@@ -54,8 +59,12 @@ def calc_escape_velocity(sim, particle):
     return np.sqrt(2 * G * m / r)
 
 
-def strong_regime(resolution=100, n_trials=50):
-    print(f"Starting strong regime simulation with resolution {resolution},"
+def strong_regime(resolution, n_trials):
+    """
+
+    """
+
+    print(f"Starting strong regime simulation with resolution {resolution}, "
           f"{n_trials} trials each...")
     xs = np.linspace(1, 50, resolution)
     f_eject = np.ones(resolution)
@@ -75,7 +84,7 @@ def strong_regime(resolution=100, n_trials=50):
             sim = simulate_fly_by(sim, intruder)
 
             sim.move_to_hel()
-            for particle in sim.particles:
+            for particle in sim.particles[1:]:
                 v = np.linalg.norm(particle.vxyz)
                 v_esc = calc_escape_velocity(sim, particle)
                 if v > v_esc:
@@ -102,6 +111,7 @@ def orbit_list(simulation, period, particle, step_size):
     """
     Creates list of points on an orbit.
     """
+
     locations = []
     total_time = 0
 #     Temporary simulation, adding sun and the particle we want the orbit from
@@ -144,6 +154,10 @@ def check_orbit_crossing(simulation):
 
 
 def check_immediate_ejection(sim):
+    """
+    Checks whether there is a planet in the simulation with v > v_escape.
+    """
+
     # move to Sun frame
     sim.move_to_hel()
 
@@ -157,9 +171,12 @@ def check_immediate_ejection(sim):
     return False
 
 
-
 def  check_kozai(sim):
-    # compare all particles
+    """
+    Checks whether the kozai mechanism is happening in a simulation.
+    """
+
+    # compare all particles except the star
     for i, particle_1 in enumerate(sim.particles[1:]):
         for j, particle_2 in enumerate(sim.particles[i+2:]):
             # calculate mutual inclination. defined as difference in inclination between two orbits
@@ -191,15 +208,18 @@ def analyze_stability(sim):
     elif check_kozai(sim) == True:
         return False
 
-    # elif check_AMD(sim) == True:
-    #     return False
-
     else:
         return True
 
 
 if __name__ == "__main__":
-    print(analyze_stability(sim))
-    xs, f_eject = strong_regime(resolution=30, n_trials=100)
 
+    resolution = 10
+    n_trials = 100
+    take = 1
+
+    xs, f_eject = strong_regime(resolution, n_trials)
     plt.plot(xs, f_eject)
+    plt.savefig(f"Strong regime, resolution at {resolution} and {n_trials} trials"
+                f", take {take}")
+    plt.show()
