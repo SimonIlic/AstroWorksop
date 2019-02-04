@@ -9,6 +9,7 @@ import numpy as np
 from IPython.display import display, clear_output
 import matplotlib.pyplot as plt
 from scipy import spatial
+import pickle
 
 
 
@@ -268,11 +269,10 @@ def analyze_stability(sim):
         return True
 
 
-def plot_hist_first_event(time_yrs, sim_list):
+def plot_hist_first_event(sim_list):
     """
     Plots some stuff from the simulation given to the function in a dictionary.
-    sim_list structure: [{sim: rebound.Simulation,
-    intruder: rebound.Particle,
+    sim_list structure: [{inc: 0 or pi/2,
     close_encounters: array of times,
     escapes: array of times,
     kozai: array of times,
@@ -287,37 +287,65 @@ def plot_hist_first_event(time_yrs, sim_list):
     kozai_first_90 = []
     kozai_first_0 = []
     for i, sim_dict in enumerate(sim_list):
-        if sim_dict[kozai]:
-            if sim_dict[intruder].z > 0:
-                kozai_first_90.append(sim_dict[kozai][0])
-            if sim_dict[intruder].z == 0:
-                kozai_first_0.append(sim_dict[kozai][0])
+        if sim_dict["kozai"]:
+            # if sim_dict["intruder"] > 0:
+            #     kozai_first_90.append(sim_dict["kozai"][0])
+            if sim_dict["intruder"] == 0:
+                kozai_first_0.append(sim_dict["kozai"][0])
 
-    lists_dict["kozai_90"] = np.array(kozai_first_90)
+    # lists_dict["kozai_90"] = np.array(kozai_first_90)
     lists_dict["kozai_0"] = np.array(kozai_first_0)
 
     # Same for orbit crossing
     orbit_first_90 = []
     orbit_first_0 = []
     for i, sim_dict in enumerate(sim_list):
-        if sim_dict[orbit_crossing]:
-            if sim_dict[intruder].z > 0:
-                orbit_first_90.append(sim_dict[orbit_crossing][0])
-            if sim_dict[intruder].z == 0:
-                orbit_first_0.append(sim_dict[orbit_crossing][0])
+        if sim_dict["orbit_crossing"]:
+            # if sim_dict["intruder"].z > 0:
+            #     orbit_first_90.append(sim_dict["orbit_crossing"][0])
+            if sim_dict["intruder"] == 0:
+                orbit_first_0.append(sim_dict["orbit_crossing"][0])
 
-    lists_dict["orbit_90"] = orbit_first_90
+    # lists_dict["orbit_90"] = orbit_first_90
     lists_dict["orbit_0"] = orbit_first_0
 
+    escape_first_0 = []
+    for i, sim_dict in enumerate(sim_list):
+        if sim_dict["escapes"]:
+            if sim_dict["intruder"] == 0:
+                escape_first_0.append(sim_dict["escapes"][0])
+
+    lists_dict["escape_0"] = escape_first_0
 
     # Plot that hist
     for i, key in enumerate(lists_dict.keys()):
-        plt.hist(lists_dict[key], bins=100)
+        print(lists_dict[key])
+        plt.hist(lists_dict[key], bins=10)
         plt.ylabel("Frequency")
         plt.xlabel("Time (yr/2pi)")
-        plt.savefig(f"plot, {list_dict[key]}, histogram")
+        # plt.xlim([500, 2000])
+        if key == "escape_0":
+            plt.title("Escapes after fly-by with incl. 0")
+        elif key == "orbit_0":
+            plt.title("Orbit crossings after fly-by with incl. 0")
+        elif key == "kozai_0":
+            plt.title("Kozai mech. measurements after fly-by with incl. 0")
+        plt.savefig(f"plot_{key}_histogram.png")
+        plt.show()
 
+
+def unpack_pickle_file(filename):
+    """
+    Unpacks te pickle file containing our data.
+    """
+    with open(filename, 'rb') as handle:
+        result = pickle.load(handle)
+
+    return result
 
 
 
 if __name__ == "__main__":
+
+    data = unpack_pickle_file("sim_results_i0.pickle")
+    plot_hist_first_event(data)
