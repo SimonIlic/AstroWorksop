@@ -25,7 +25,7 @@ def simulate_fly_by(sim, intruder, visualize=False):
 
     while True:
         try:
-            sim.integrate(sim.t+5)
+            sim.integrate(sim.t+25)
 
             if visualize:
                 fig = rebound.OrbitPlot(sim,color=True,unitlabel="[AU]")
@@ -59,7 +59,7 @@ def calc_escape_velocity(sim, particle):
 
 def strong_regime(resolution, n_trials):
     """
-
+    Simulates a fly-by and calculates whether the system is stable or not.
     """
 
     print(f"Starting strong regime simulation with resolution {resolution}, "
@@ -69,7 +69,7 @@ def strong_regime(resolution, n_trials):
     f_stable = np.ones(resolution)
 
     for i, x in enumerate(xs):
-        print("Running r_min =", x)
+        print("Running r_min =", x, f"at {100.*x/xs}%")
         eject_count = 0.
         stable_count = 0.
 
@@ -92,14 +92,14 @@ def strong_regime(resolution, n_trials):
             stable = analyze_stability(sim)
             if stable:
                 stable_count += 1
-        print(f"Detected", eject_count, "ejections out of", n_trials, "trials.")
-        if stable_count:
+        print("Detected", eject_count, "ejections out of", n_trials, "trials.")
+        if n_trials > eject_count:
             percentage = 100 * stable_count / (n_trials-eject_count)
             print(eject_count, n_trials, stable_count)
-            print(f"Of the {n_trials - eject_count} systems left,  {percentage}% was not long term unstable")
+            print(f"Of the {n_trials - eject_count} systems left, "
+                  f"{percentage}% was not long term unstable.")
         f_eject[i] = eject_count / n_trials
-        f_stable[i] = stable_count / (n_trials)
-        print(f_eject[i])
+        f_stable[i] = stable_count / n_trials
 
     return (xs, f_eject, f_stable)
 
@@ -108,7 +108,6 @@ def mutual_rhill(p1, p2):
     """
     Calculates mutual Hill radius of particle 1 and 2.
     """
-
     rhill_m = (p1.a + p2.a) / 2. * ((p1.m + p2.m) / 3.)**(1/3.)
     return rhill_m
 
@@ -221,19 +220,19 @@ def analyze_stability(sim):
 if __name__ == "__main__":
 
     resolution = 30
-    n_trials = 100
-    take = 2
+    n_trials = 500
+    take = 3
 
     xs, f_eject, f_stable = strong_regime(resolution, n_trials)
     plt.figure(1)
     # plt.subplot(211)
-    plt.plot(xs, f_eject, 'b--')
+    plt.plot(xs, f_eject, 'bo')
     plt.title("Systems ejecting a planet")
     # plt.subplot(212)
     # plt.title("Stable systems")
     plt.xlabel("r_min (AU)")
     plt.ylabel("Fraction")
-    plt.plot(xs, f_stable, 'r--')
+    plt.plot(xs, f_stable, 'ro')
     plt.savefig(f"Strong regime, resolution at {resolution} and {n_trials} trials"
                 f", take {take}")
     plt.show()
