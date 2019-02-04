@@ -25,7 +25,7 @@ def simulate_fly_by(sim, intruder, visualize=False):
 
     while True:
         try:
-            sim.integrate(sim.t+25)
+            sim.integrate(sim.t+5)
 
             if visualize:
                 fig = rebound.OrbitPlot(sim,color=True,unitlabel="[AU]")
@@ -34,11 +34,11 @@ def simulate_fly_by(sim, intruder, visualize=False):
                 clear_output(wait=True)
 
         except rebound.Escape as error:
-            #print(error)
+            # print(error)
             for i, particle in enumerate(sim.particles):
                 distance = np.linalg.norm(particle.xyz)
                 if distance > sim.exit_max_distance:
-                    #print("Removed", i, str(particle.hash))
+                    # print("Removed", i, str(particle.hash))
                     sim.remove(hash=particle.hash)
                     sim.move_to_com()
 
@@ -57,6 +57,56 @@ def calc_escape_velocity(sim, particle):
     return np.sqrt(2 * G * m / r)
 
 
+def evolve_system(sim, t):
+    sim.exit_max_distance = 500
+
+    close_encounters = []
+    ejections = []
+    # set planet radii to their hill spheres
+    for planet in sim.particles[1:]:
+        planet.r = hill_radius(planet, sim.particles[0])
+
+    sim.collision = "direct"
+
+    end_time = sim.t + t
+    while sim.t < end_time:
+        try:
+            sim.integrate(end_time)
+        except (rebound.Collision, rebound.Escape) as error:
+            sim.status()
+            if type(error) == type(rebound.Collision()):
+                print(error, sim.t)
+                collided = []
+                for particle in sim.particles:
+                    if particle.lastcollision == sim.t:
+                        collided.append(particle.index)
+
+                planet_1 = sim.particles[collided[0]]
+                planet_2 = sim.particles[collided[1]]
+
+                d = np.linalg.norm(np.array(planet_1.xyz) - np.array(planet_2.xyz))
+                print(planet_1.index, planet_2.index, "close encounter. distance:", d)
+
+                resolve_collision(sim)
+                close_encounters.append(((planet_1.index, planet_2.index), d, sim.t))
+
+            else:
+                print(error)
+                out_of_bounds = []
+                for i, particle in enumerate(sim.particles):
+                    distance = np.linalg.norm(particle.xyz)
+                    if distance > sim.exit_max_distance:
+                        print("Removed", particle.index, str(particle.hash))
+                        out_of_bounds.append(particle.hash)
+                        ejections.append((particle.index, particle.xyz, sim.t))
+
+                for hsh in out_of_bounds:
+                        sim.remove(hash=hsh)
+                        sim.move_to_com()
+
+    return (sim, close_encounters, ejections)
+
+
 def strong_regime(resolution, n_trials):
     """
     Simulates a fly-by and calculates whether the system is stable or not.
@@ -69,7 +119,7 @@ def strong_regime(resolution, n_trials):
     f_stable = np.ones(resolution)
 
     for i, x in enumerate(xs):
-        print("Running r_min =", x, f"at {100.*x/xs}%")
+        print(f"Running r_min = {x} at {round(100.*x/len(xs), 1)}%")
         eject_count = 0.
         stable_count = 0.
 
@@ -83,12 +133,14 @@ def strong_regime(resolution, n_trials):
 
             sim = simulate_fly_by(sim, intruder)
             sim.move_to_hel()
+
             for particle in sim.particles[1:]:
                 v = np.linalg.norm(particle.vxyz)
                 v_esc = calc_escape_velocity(sim, particle)
                 if v > v_esc:
                     eject_count += 1
                     break
+
             stable = analyze_stability(sim)
             if stable:
                 stable_count += 1
@@ -119,12 +171,12 @@ def orbit_list(simulation, period, particle, step_size):
 
     locations = []
     total_time = 0
-#     Temporary simulation, adding sun and the particle we want the orbit from
+    # Temporary simulation, adding sun and the particle we want the orbit from
     temp_sim = rebound.Simulation()
     temp_sim.add(simulation.particles[0])
     temp_sim.add(particle)
     particle = temp_sim.particles[1]
-#     Integrating over exactly one orbit
+    # Integrating over exactly one orbit
     while total_time < period:
         temp_sim.integrate(temp_sim.t+step_size)
         total_time += step_size
@@ -138,7 +190,7 @@ def check_orbit_crossing(simulation):
     Checks in a simulation whether any orbits cross.
     """
 
-#     Creating and saving lists with points on orbits
+    # Creating and saving lists with points on orbits
     locationslist = []
     for i, particle in enumerate(simulation.particles[1:]):
         orbit = particle.calculate_orbit()
@@ -146,13 +198,12 @@ def check_orbit_crossing(simulation):
         locationslist.append(orbit_list(simulation,
                                         orbit.P, particle, step_size))
 
-#     creating distance matrix
+    # creating distance matrix
     for i, loc1 in enumerate(locationslist):
         for j, loc2 in enumerate(locationslist[i+1:]):
             dist_mat = spatial.distance_matrix(loc1, loc2)
             if dist_mat[np.where(dist_mat < mutual_rhill(simulation.particles[i+1],
                     simulation.particles[j+i+2]))].size > 0:
-                # print(f"Planet {i+1} and {i+j+2} (counting from star) will collide!")
                 return True
 
     return False
@@ -217,22 +268,56 @@ def analyze_stability(sim):
         return True
 
 
+def plot_hist_first_event(time_yrs, sim_list):
+    """
+    Plots some stuff from the simulation given to the function in a dictionary.
+    sim_list structure: [{sim: rebound.Simulation,
+    intruder: rebound.Particle,
+    close_encounters: array of times,
+    escapes: array of times,
+    kozai: array of times,
+    orbit_crossing: array of times,
+    v_escapes: float}, ...]
+    """
+
+    # Dict to add all lists to to make plotting easier
+    lists_dict = {}
+
+    # Create lists of first kozai measurement for inc = 90 and inc = 0
+    kozai_first_90 = []
+    kozai_first_0 = []
+    for i, sim_dict in enumerate(sim_list):
+        if sim_dict[kozai]:
+            if sim_dict[intruder].z > 0:
+                kozai_first_90.append(sim_dict[kozai][0])
+            if sim_dict[intruder].z == 0:
+                kozai_first_0.append(sim_dict[kozai][0])
+
+    lists_dict["kozai_90"] = np.array(kozai_first_90)
+    lists_dict["kozai_0"] = np.array(kozai_first_0)
+
+    # Same for orbit crossing
+    orbit_first_90 = []
+    orbit_first_0 = []
+    for i, sim_dict in enumerate(sim_list):
+        if sim_dict[orbit_crossing]:
+            if sim_dict[intruder].z > 0:
+                orbit_first_90.append(sim_dict[orbit_crossing][0])
+            if sim_dict[intruder].z == 0:
+                orbit_first_0.append(sim_dict[orbit_crossing][0])
+
+    lists_dict["orbit_90"] = orbit_first_90
+    lists_dict["orbit_0"] = orbit_first_0
+
+
+    # Plot that hist
+    for i, key in enumerate(lists_dict.keys()):
+        plt.hist(lists_dict[key], bins=100)
+        plt.ylabel("Frequency")
+        plt.xlabel("Time (yr/2pi)")
+        plt.savefig(f"plot, {list_dict[key]}, histogram")
+
+
+
+
 if __name__ == "__main__":
-
-    resolution = 30
-    n_trials = 500
-    take = 3
-
-    xs, f_eject, f_stable = strong_regime(resolution, n_trials)
-    plt.figure(1)
-    # plt.subplot(211)
-    plt.plot(xs, f_eject, 'bo')
-    plt.title("Systems ejecting a planet")
-    # plt.subplot(212)
-    # plt.title("Stable systems")
-    plt.xlabel("r_min (AU)")
-    plt.ylabel("Fraction")
-    plt.plot(xs, f_stable, 'ro')
-    plt.savefig(f"Strong regime, resolution at {resolution} and {n_trials} trials"
-                f", take {take}")
-    plt.show()
