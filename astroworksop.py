@@ -11,8 +11,6 @@ import matplotlib.pyplot as plt
 from scipy import spatial
 
 
-sim = rebound.Simulation.from_file("solar_system_outer_planets.bin")
-
 
 def simulate_fly_by(sim, intruder, visualize=False):
     """
@@ -68,10 +66,12 @@ def strong_regime(resolution, n_trials):
           f"{n_trials} trials each...")
     xs = np.linspace(1, 50, resolution)
     f_eject = np.ones(resolution)
+    f_stable = np.ones(resolution)
 
     for i, x in enumerate(xs):
         print("Running r_min =", x)
         eject_count = 0.
+        stable_count = 0.
 
         # run n_trials trials detecting ejection directly after fly-by
         for j in range(n_trials):
@@ -82,7 +82,6 @@ def strong_regime(resolution, n_trials):
             intruder = rebound.Particle(m=1.,x=x,y=-1000.,vy=2.)
 
             sim = simulate_fly_by(sim, intruder)
-
             sim.move_to_hel()
             for particle in sim.particles[1:]:
                 v = np.linalg.norm(particle.vxyz)
@@ -90,12 +89,19 @@ def strong_regime(resolution, n_trials):
                 if v > v_esc:
                     eject_count += 1
                     break
-        print("Detected", eject_count, "ejections out of", n_trials, "trials.")
+            stable = analyze_stability(sim)
+            if stable:
+                stable_count += 1
+        print(f"Detected", eject_count, "ejections out of", n_trials, "trials.")
+        if stable_count:
+            percentage = 100 * stable_count / (n_trials-eject_count)
+            print(eject_count, n_trials, stable_count)
+            print(f"Of the {n_trials - eject_count} systems left,  {percentage}% was not long term unstable")
         f_eject[i] = eject_count / n_trials
+        f_stable[i] = stable_count / (n_trials)
         print(f_eject[i])
 
-
-    return (xs, f_eject)
+    return (xs, f_eject, f_stable)
 
 
 def mutual_rhill(p1, p2):
@@ -146,8 +152,8 @@ def check_orbit_crossing(simulation):
         for j, loc2 in enumerate(locationslist[i+1:]):
             dist_mat = spatial.distance_matrix(loc1, loc2)
             if dist_mat[np.where(dist_mat < mutual_rhill(simulation.particles[i+1],
-                                                         simulation.particles[j+i+2]))].size > 0:
-                print(f"Planet {i+1} and {i+j+2} (counting from star) will collide!")
+                    simulation.particles[j+i+2]))].size > 0:
+                # print(f"Planet {i+1} and {i+j+2} (counting from star) will collide!")
                 return True
 
     return False
@@ -171,7 +177,7 @@ def check_immediate_ejection(sim):
     return False
 
 
-def  check_kozai(sim):
+def check_kozai(sim):
     """
     Checks whether the kozai mechanism is happening in a simulation.
     """
@@ -214,12 +220,20 @@ def analyze_stability(sim):
 
 if __name__ == "__main__":
 
-    resolution = 10
+    resolution = 30
     n_trials = 100
-    take = 1
+    take = 2
 
-    xs, f_eject = strong_regime(resolution, n_trials)
-    plt.plot(xs, f_eject)
+    xs, f_eject, f_stable = strong_regime(resolution, n_trials)
+    plt.figure(1)
+    # plt.subplot(211)
+    plt.plot(xs, f_eject, 'b--')
+    plt.title("Systems ejecting a planet")
+    # plt.subplot(212)
+    # plt.title("Stable systems")
+    plt.xlabel("r_min (AU)")
+    plt.ylabel("Fraction")
+    plt.plot(xs, f_stable, 'r--')
     plt.savefig(f"Strong regime, resolution at {resolution} and {n_trials} trials"
                 f", take {take}")
     plt.show()
