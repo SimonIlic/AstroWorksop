@@ -12,7 +12,6 @@ from scipy import spatial
 import pickle
 
 
-
 def simulate_fly_by(sim, intruder, visualize=False):
     """
     Simulates what happens when a star flies by a planetary system.
@@ -245,7 +244,6 @@ def check_kozai(sim):
     return False
 
 
-
 def randomize_sim(sim):
     """
     Integrates simulation for any number of time between 0 and 999.
@@ -272,80 +270,161 @@ def analyze_stability(sim):
 def plot_hist_first_event(sim_list):
     """
     Plots some stuff from the simulation given to the function in a dictionary.
-    sim_list structure: [{inc: 0 or pi/2,
+    sim_list structure: [{intruder: 0 or pi/2,
     close_encounters: array of times,
     escapes: array of times,
     kozai: array of times,
     orbit_crossing: array of times,
-    v_escapes: float}, ...]
+    v_escapes: array of times}, ...]
     """
-
-    # Dict to add all lists to to make plotting easier
-    lists_dict = {}
 
     # Create lists of first kozai measurement for inc = 90 and inc = 0
     kozai_first_90 = []
     kozai_first_0 = []
+    kozai_all_90 = []
+    kozai_all_0 = []
+
     for i, sim_dict in enumerate(sim_list):
         if sim_dict["kozai"]:
-            # if sim_dict["intruder"] > 0:
-            #     kozai_first_90.append(sim_dict["kozai"][0])
+            if sim_dict["intruder"] > 0:
+                kozai_first_90.append(sim_dict["kozai"][0])
             if sim_dict["intruder"] == 0:
                 kozai_first_0.append(sim_dict["kozai"][0])
-
-    # lists_dict["kozai_90"] = np.array(kozai_first_90)
-    lists_dict["kozai_0"] = np.array(kozai_first_0)
+                for t in sim_dict["kozai"]:
+                    kozai_all_0.append(t)
+    kozai_first_0.sort()
+    kozai_first_90.sort()
+    kozai_all_90.sort()
+    kozai_all_0.sort()
 
     # Same for orbit crossing
     orbit_first_90 = []
     orbit_first_0 = []
+    orbit_crossings_90 = []
+    orbit_crossings_0 = []
+
     for i, sim_dict in enumerate(sim_list):
         if sim_dict["orbit_crossing"]:
-            # if sim_dict["intruder"].z > 0:
-            #     orbit_first_90.append(sim_dict["orbit_crossing"][0])
+            if sim_dict["intruder"] > 0:
+                orbit_first_90.append(sim_dict["orbit_crossing"][0])
+                for t in sim_dict["orbit_crossing"]:
+                    orbit_all_0.append(t)
             if sim_dict["intruder"] == 0:
+                for t in sim_dict["orbit_crossing"]:
+                    orbit_crossings_0.append(t)
                 orbit_first_0.append(sim_dict["orbit_crossing"][0])
 
-    # lists_dict["orbit_90"] = orbit_first_90
-    lists_dict["orbit_0"] = orbit_first_0
+    orbit_first_0.sort()
+    orbit_first_90.sort()
+    orbit_crossings_90.sort()
+    orbit_crossings_0.sort()
+
 
     escape_first_0 = []
+    v_escape_all_0 = []
+    escape_all_0 = []
+    escape_first_90 = []
+    v_escape_all_90 = []
+    escape_all_90 = []
     for i, sim_dict in enumerate(sim_list):
         if sim_dict["escapes"]:
             if sim_dict["intruder"] == 0:
                 escape_first_0.append(sim_dict["escapes"][0])
+                for t in sim_dict["v_escapes"]:
+                    v_escape_all_0.append(t)
+                for t in sim_dict["escapes"][1:]:
+                    escape_all_0.append(t)
+            elif sim_dict["intruder"] > 0:
+                escape_first_90.append(sim_dict["escapes"][0])
+                for t in sim_dict["v_escapes"]:
+                    v_escape_all_90.append(t)
+                for t in sim_dict["escapes"][1:]:
+                    escape_all_90.append(t)
 
-    lists_dict["escape_0"] = escape_first_0
+    escape_all_0.sort()
+    v_escape_all_0.sort()
+    escape_first_0.sort()
+    escape_all_90.sort()
+    v_escape_all_90.sort()
+    escape_first_90.sort()
 
-    # Plot that hist
-    for i, key in enumerate(lists_dict.keys()):
-        print(lists_dict[key])
-        plt.hist(lists_dict[key], bins=10)
-        plt.ylabel("Frequency")
-        plt.xlabel("Time (yr/2pi)")
-        # plt.xlim([500, 2000])
-        if key == "escape_0":
-            plt.title("Escapes after fly-by with incl. 0")
-        elif key == "orbit_0":
-            plt.title("Orbit crossings after fly-by with incl. 0")
-        elif key == "kozai_0":
-            plt.title("Kozai mech. measurements after fly-by with incl. 0")
-        plt.savefig(f"plot_{key}_histogram.png")
-        plt.show()
+
+    # close encounters same story
+    clenc_first_0 = []
+    clenc_all_0 = []
+    clenc_first_90 = []
+    clenc_all_90 = []
+    for i, sim_dict in enumerate(sim_list):
+        if sim_dict["close_encounters"]:
+            if sim_dict["intruder"] == 0:
+                clenc_first_0.append(sim_dict["close_encounters"][0])
+                for t in sim_dict["close_encounters"]:
+                    clenc_all_0.append(t)
+            elif sim_dict["intruder"] > 0:
+                clenc_first_90.append(sim_dict["close_encounters"][0])
+                for t in sim_dict["close_encounters"]:
+                    clenc_all_90.append(t)
+
+    clenc_first_0.sort()
+    clenc_all_0.sort()
+    clenc_first_90.sort()
+    clenc_all_90.sort()
+
+    plt.subplot(311)
+    plt.hist(escape_all_0, bins=100, cumulative=True)
+    plt.title("Escapes measured after fly-by")
+    plt.ylabel("freq")
+    plt.xlim([0,350])
+
+    plt.subplot(312)
+    plt.hist(clenc_first_0, bins=100, cumulative=True)
+    plt.title("First close encounters measured")
+    plt.ylabel("freq")
+    plt.xlim([0,350])
+    plt.savefig("")
+
+    plt.subplot(313)
+    plt.plot(kozai_first_0, np.arange(1, 1 + len(kozai_first_0))/len(sim_list))
+    plt.title("Fraction of simulations ending in measurement of Kozai mechanism")
+    plt.ylabel("Fraction")
+    plt.xlim([0,350])
+    plt.xlabel("Time after end of fly by (yr")
+    plt.savefig("plots/plots_for_pres.png")
+
+    plt.show()
+
 
 
 def unpack_pickle_file(filename):
     """
     Unpacks te pickle file containing our data.
+    Also fixes the whole 'yr/2pi' thing.
     """
     with open(filename, 'rb') as handle:
         result = pickle.load(handle)
 
+    for dic in result:
+        for key in dic.keys():
+            if isinstance(dic[key], (list, )):
+                for i, value in enumerate(dic[key]):
+                    value = value / (2 * np.pi)
+                    dic[key][i] = value
+
     return result
+
+
+# Antwoorden vragen:
+# - iets om te googelen
+# - gefixt
+# - simon vragen
+# - heb ik niet als info gekregen
+# - Nee.
+# - Yep.
+# - Geprobeerd, enigzins.
 
 
 
 if __name__ == "__main__":
 
-    data = unpack_pickle_file("sim_results_i0.pickle")
+    data = unpack_pickle_file("sim_results_i0_max_t_1000.pickle")
     plot_hist_first_event(data)
