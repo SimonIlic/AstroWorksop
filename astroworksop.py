@@ -292,10 +292,12 @@ def plot_hist_first_event(sim_list):
                 kozai_first_0.append(sim_dict["kozai"][0])
                 for t in sim_dict["kozai"]:
                     kozai_all_0.append(t)
+
     kozai_first_0.sort()
     kozai_first_90.sort()
     kozai_all_90.sort()
     kozai_all_0.sort()
+    print(kozai_first_90)
 
     # Same for orbit crossing
     orbit_first_90 = []
@@ -308,7 +310,7 @@ def plot_hist_first_event(sim_list):
             if sim_dict["intruder"] > 0:
                 orbit_first_90.append(sim_dict["orbit_crossing"][0])
                 for t in sim_dict["orbit_crossing"]:
-                    orbit_all_0.append(t)
+                    orbit_crossings_90.append(t)
             if sim_dict["intruder"] == 0:
                 for t in sim_dict["orbit_crossing"]:
                     orbit_crossings_0.append(t)
@@ -332,13 +334,13 @@ def plot_hist_first_event(sim_list):
                 escape_first_0.append(sim_dict["escapes"][0])
                 for t in sim_dict["v_escapes"]:
                     v_escape_all_0.append(t)
-                for t in sim_dict["escapes"][1:]:
+                for t in sim_dict["escapes"]:
                     escape_all_0.append(t)
             elif sim_dict["intruder"] > 0:
                 escape_first_90.append(sim_dict["escapes"][0])
                 for t in sim_dict["v_escapes"]:
                     v_escape_all_90.append(t)
-                for t in sim_dict["escapes"][1:]:
+                for t in sim_dict["escapes"]:
                     escape_all_90.append(t)
 
     escape_all_0.sort()
@@ -370,26 +372,26 @@ def plot_hist_first_event(sim_list):
     clenc_first_90.sort()
     clenc_all_90.sort()
 
-    plt.subplot(311)
-    plt.hist(escape_all_0, bins=100, cumulative=True)
-    plt.title("Escapes measured after fly-by")
-    plt.ylabel("freq")
-    plt.xlim([0,350])
+    # plt.subplot(311)
+    # plt.hist(escape_all_0, bins=100, cumulative=True)
+    # plt.title("Escapes measured after fly-by, 0 degrees, cumulative")
+    # plt.ylabel(f"Frequency ({len(sim_list)} simulations)")
+    # plt.xlim([0,350])
 
-    plt.subplot(312)
-    plt.hist(clenc_first_0, bins=100, cumulative=True)
-    plt.title("First close encounters measured")
-    plt.ylabel("freq")
-    plt.xlim([0,350])
-    plt.savefig("")
-
-    plt.subplot(313)
-    plt.plot(kozai_first_0, np.arange(1, 1 + len(kozai_first_0))/len(sim_list))
-    plt.title("Fraction of simulations ending in measurement of Kozai mechanism")
-    plt.ylabel("Fraction")
-    plt.xlim([0,350])
-    plt.xlabel("Time after end of fly by (yr")
-    plt.savefig("plots/plots_for_pres.png")
+    # plt.subplot(312)
+    plt.hist(orbit_first_90, bins=100, cumulative=False)
+    plt.title(f"First orbit crossings measured after fly-by, 90 degrees, cumulative")
+    plt.ylabel(f"Frequency ({len(sim_list)} simulations)")
+    # plt.xlim([0,350])
+    plt.savefig("plots/oc_90_cu.png")
+    #
+    # plt.subplot(313)
+    # plt.plot(kozai_first_90, np.arange(1, 1 + len(kozai_first_90))/len(sim_list))
+    # plt.title("Fraction of simulations ending in measurement of Kozai mechanism, 90 degrees")
+    # plt.ylabel("Fraction")
+    # # plt.xlim([0,350])
+    plt.xlabel("Time after end of fly by (yr)")
+    # plt.savefig("plots/plots_for_pres_0_escapes_c.png")
 
     plt.show()
 
@@ -402,6 +404,8 @@ def unpack_pickle_file(filename):
     """
     with open(filename, 'rb') as handle:
         result = pickle.load(handle)
+
+    print(result[0].keys())
 
     for dic in result:
         for key in dic.keys():
@@ -426,5 +430,12 @@ def unpack_pickle_file(filename):
 
 if __name__ == "__main__":
 
-    data = unpack_pickle_file("sim_results_i0_max_t_1000.pickle")
-    plot_hist_first_event(data)
+    data = unpack_pickle_file("sim_results_i90_t_max_10_5.pickle")
+    #plot_hist_first_event(data)
+
+    count = 0
+    for sim in data:
+        if not sim["escapes"]:
+            count+=1
+    print(len(data))
+    print(count)
