@@ -269,7 +269,7 @@ def analyze_stability(sim):
 
 def plot_hist_first_event(sim_list):
     """
-    Plots some stuff from the simulation given to the function in a dictionary.
+    Plots some data from the simulation given to the function in a dictionary.
     sim_list structure: [{intruder: 0 or pi/2,
     close_encounters: array of times,
     escapes: array of times,
@@ -297,7 +297,6 @@ def plot_hist_first_event(sim_list):
     kozai_first_90.sort()
     kozai_all_90.sort()
     kozai_all_0.sort()
-    print(kozai_first_90)
 
     # Same for orbit crossing
     orbit_first_90 = []
@@ -379,21 +378,21 @@ def plot_hist_first_event(sim_list):
     # plt.xlim([0,350])
 
     # plt.subplot(312)
-    plt.hist(orbit_first_90, bins=100, cumulative=False)
-    plt.title(f"First orbit crossings measured after fly-by, 90 degrees, cumulative")
+    plt.hist(kozai_first_0, bins=100, cumulative=False)
+    plt.title(f"First cases of Kozai mechanism measured after fly-by, 0 degrees")
     plt.ylabel(f"Frequency ({len(sim_list)} simulations)")
     # plt.xlim([0,350])
-    plt.savefig("plots/oc_90_cu.png")
+    # plt.savefig("plots/oc_90_cu.png")
     #
     # plt.subplot(313)
     # plt.plot(kozai_first_90, np.arange(1, 1 + len(kozai_first_90))/len(sim_list))
     # plt.title("Fraction of simulations ending in measurement of Kozai mechanism, 90 degrees")
     # plt.ylabel("Fraction")
     # # plt.xlim([0,350])
-    plt.xlabel("Time after end of fly by (yr)")
-    # plt.savefig("plots/plots_for_pres_0_escapes_c.png")
+    plt.xlabel("Time after start of fly by (yr)")
+    # plt.savefig("plots/kozai_0.png")
 
-    plt.show()
+    # plt.show()
 
 
 
@@ -405,14 +404,13 @@ def unpack_pickle_file(filename):
     with open(filename, 'rb') as handle:
         result = pickle.load(handle)
 
-    print(result[0].keys())
-
     for dic in result:
         for key in dic.keys():
             if isinstance(dic[key], (list, )):
                 for i, value in enumerate(dic[key]):
                     value = value / (2 * np.pi)
                     dic[key][i] = value
+    print(result)
 
     return result
 
@@ -431,11 +429,4 @@ def unpack_pickle_file(filename):
 if __name__ == "__main__":
 
     data = unpack_pickle_file("sim_results_i90_t_max_10_5.pickle")
-    #plot_hist_first_event(data)
-
-    count = 0
-    for sim in data:
-        if not sim["escapes"]:
-            count+=1
-    print(len(data))
-    print(count)
+    plot_hist_first_event(data)
